@@ -10,7 +10,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
 
 <style>
@@ -139,8 +138,8 @@ body:after{content:"";position:fixed;width:70vw;height:70vw;right:-35vw;top:-40v
 <!-- ===========================
      NOVA — STUDENT LIFE OS
      Single-file production-ready frontend.
-     Supabase is optional: without credentials,
-     NOVA securely falls back to local browser storage.
+     Clerk handles authentication; NOVA keeps app data
+     in local browser storage until a database is connected.
 ============================ -->
 
 <div id="loader">
@@ -159,14 +158,7 @@ body:after{content:"";position:fixed;width:70vw;height:70vw;right:-35vw;top:-40v
     <div class="eyebrow">Student Life OS</div>
     <h1 id="authTitle">Welcome back.</h1>
     <p class="auth-desc" id="authDesc">Everything you need to stay ahead, without the noise.</p>
-    <form id="authForm">
-      <div class="field" id="nameWrap" style="display:none"><label>YOUR NAME</label><input id="authName" autocomplete="name" placeholder="What should NOVA call you?"></div>
-      <div class="field"><label>EMAIL</label><input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div>
-      <div class="field"><label>PASSWORD</label><input id="authPassword" type="password" minlength="6" autocomplete="current-password" required placeholder="••••••••"></div>
-      <button class="btn full" id="authButton">Sign in →</button>
-      <div class="auth-error" id="authError"></div>
-    </form>
-    <div class="auth-switch"><span id="switchLabel">New here?</span> <button type="button" id="switchMode">Create account</button></div>
+    <div id="clerkAuth"></div>
   </div>
 </section>
 
@@ -306,17 +298,48 @@ body:after{content:"";position:fixed;width:70vw;height:70vw;right:-35vw;top:-40v
 <div class="toast" id="toast"></div>
 
 <script>
-/* ================= SUPABASE =================
-Replace with your own project values.
-Never use a service-role/secret key here.
-Supabase Dashboard → Project Settings → API.
-For full database sync, create tables matching:
-profiles, tasks, exams, notes, study_sessions, classes.
-This frontend works locally even before Supabase is configured.
+/* ================= CLERK =================
+   Use ONLY your Clerk Publishable Key in this frontend.
+   NEVER put a sk_test_ / sk_live_ Secret Key here.
+   Clerk Dashboard → API Keys → Quick Copy → JavaScript.
 ============================================= */
-const SUPABASE_URL="YOUR_SUPABASE_URL";
-const SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY";
-const supabaseClient=(window.supabase && SUPABASE_URL.startsWith("http"))?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+const CLERK_PUBLISHABLE_KEY="pk_test_ZmlybS1mYXduLTI1NjcuY2xlcmsuYWNjb3VudHMuZGV2JA";
+let clerk=null;
+
+async function initClerk(){
+  if(!CLERK_PUBLISHABLE_KEY || !CLERK_PUBLISHABLE_KEY.startsWith("pk_")){
+    throw new Error("Add your Clerk Publishable Key to CLERK_PUBLISHABLE_KEY in this file.");
+  }
+  const clerkDomain=atob(CLERK_PUBLISHABLE_KEY.split("_")[2]).slice(0,-1);
+  await new Promise((resolve,reject)=>{
+    const ui=document.createElement("script");
+    ui.src=`https://${clerkDomain}/npm/@clerk/ui@1/dist/ui.browser.js`;
+    ui.async=true;ui.crossOrigin="anonymous";ui.onload=resolve;ui.onerror=()=>reject(new Error("Failed to load Clerk UI."));
+    document.head.appendChild(ui);
+  });
+  await new Promise((resolve,reject)=>{
+    const sdk=document.createElement("script");
+    sdk.src=`https://${clerkDomain}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`;
+    sdk.async=true;sdk.crossOrigin="anonymous";sdk.setAttribute("data-clerk-publishable-key",CLERK_PUBLISHABLE_KEY);sdk.onload=resolve;sdk.onerror=()=>reject(new Error("Failed to load ClerkJS."));
+    document.head.appendChild(sdk);
+  });
+  await window.Clerk.load({
+    ui:{ClerkUI:window.__internal_ClerkUICtor},
+    appearance:{
+      variables:{colorPrimary:"#d9d1be",colorForeground:"#f1eee5",colorBackground:"#10100f",colorInputBackground:"#151513",colorInputText:"#f1eee5",colorTextSecondary:"#85857d",borderRadius:"14px"},
+      elements:{card:"box-shadow:none;border:0;background:transparent",formFieldInput:"border-color:#282824",formButtonPrimary:"background:#d9d1be;color:#151511"}
+    }
+  });
+  clerk=window.Clerk;
+}
+
+function mountClerkAuth(mode="signIn"){
+  const host=$("#clerkAuth");
+  host.innerHTML="";
+  if(mode==="signUp") clerk.mountSignUp(host,{routing:"hash",signInUrl:"#sign-in",signInFallbackRedirectUrl:location.href,signUpFallbackRedirectUrl:location.href});
+  else clerk.mountSignIn(host,{routing:"hash",signUpUrl:"#sign-up",signInFallbackRedirectUrl:location.href,signUpFallbackRedirectUrl:location.href});
+}
+
 
 const STORE="nova_v3";
 const defaultData={tasks:[],exams:[],notes:[],classes:[],sessions:[],profile:{name:""}};
@@ -333,7 +356,7 @@ const daysUntil=d=>Math.ceil((new Date(d+"T23:59:59")-new Date())/86400000);
 function save(){localStorage.setItem(STORE,JSON.stringify(data));render();}
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2300)}
 function greeting(){const h=new Date().getHours();return h<12?"Good morning.":h<18?"Good afternoon.":"Good evening."}
-function name(){return data.profile.name||currentUser?.user_metadata?.name||currentUser?.name||currentUser?.email?.split("@")[0]||"Student"}
+function name(){const email=currentUser?.primaryEmailAddress?.emailAddress||currentUser?.emailAddresses?.[0]?.emailAddress||"";return data.profile.name||currentUser?.firstName||currentUser?.fullName||email.split("@")[0]||"Student"}
 function openModal(title,body){$("#modalTitle").textContent=title;$("#modalBody").innerHTML=body;$("#modal").classList.add("open");setTimeout(()=>$("#modalBody input, #modalBody textarea")?.focus(),50);lucide.createIcons()}
 function closeModal(){$("#modal").classList.remove("open")}
 $("#modalClose").onclick=closeModal;$("#modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
@@ -411,8 +434,8 @@ function render(){
  const days=[];for(let i=6;i>=0;i--){let d=new Date();d.setDate(d.getDate()-i);let iso=d.toISOString().slice(0,10),mins=s.filter(x=>x.date===iso).reduce((a,x)=>a+(x.minutes||0),0);days.push({iso,mins,label:d.toLocaleDateString(undefined,{weekday:"short"})})}
  $("#weekBars").innerHTML=days.map(d=>`<div class="bar-row"><span>${d.label}</span><div class="bar"><i style="width:${Math.min(100,d.mins/120*100)}%"></i></div><span>${d.mins}m</span></div>`).join("");
  $("#studyToday").textContent=focus>=60?Math.floor(focus/60)+"h "+focus%60+"m":focus+"m";$("#studySessions").textContent=s.filter(x=>x.date===today()).length;$("#studyStreak").textContent=studyStreak()+"d";
- $("#profileName").textContent=name();$("#profileEmail").textContent=currentUser?.email||"Local account";$("#profileDisplayName").value=data.profile.name||"";
- $("#storageStatus").textContent=supabaseClient?"Supabase client configured.":"Local mode active — configure Supabase keys for cloud authentication.";
+ $("#profileName").textContent=name();$("#profileEmail").textContent=currentUser?.primaryEmailAddress?.emailAddress||currentUser?.emailAddresses?.[0]?.emailAddress||"";$("#profileDisplayName").value=data.profile.name||"";
+ $("#storageStatus").textContent=clerk?.isSignedIn?"Clerk authentication active. NOVA data is stored locally in this browser.":"Clerk authentication not connected.";
  lucide.createIcons();
 }
 function studyStreak(){let streak=0;for(let i=0;i<365;i++){let d=new Date();d.setDate(d.getDate()-i);let iso=d.toISOString().slice(0,10);if(data.sessions.some(x=>x.date===iso)){streak++}else if(i>0)break}return streak}
@@ -464,19 +487,24 @@ $("#commandInput").oninput=e=>renderCommands(e.target.value);$("#command").oncli
 document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();$("#command").classList.toggle("open");if($("#command").classList.contains("open"))$("#commandInput").focus();renderCommands()}if(e.key==="Escape"){closeModal();$("#command").classList.remove("open")}});
 
 /* Auth */
-function enterApp(u){currentUser=u;$("#auth").style.display="none";$("#app").style.display="block";render()}
-function enterLocal(){enterApp({email:$("#authEmail").value,name:$("#authName").value||$("#authEmail").value.split("@")[0]})}
-$("#switchMode").onclick=()=>{isSignup=!isSignup;$("#nameWrap").style.display=isSignup?"grid":"none";$("#authTitle").textContent=isSignup?"Create your system.":"Welcome back.";$("#authDesc").textContent=isSignup?"A calmer way to manage student life.":"Everything you need to stay ahead, without the noise.";$("#authButton").textContent=isSignup?"Create account →":"Sign in →";$("#switchLabel").textContent=isSignup?"Already have an account?":"New here?";$("#switchMode").textContent=isSignup?"Sign in":"Create account";$("#authError").textContent=""};
-$("#authForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";if(!supabaseClient){enterLocal();toast("Local mode active — connect Supabase for cloud accounts.");return}
- try{const res=isSignup?await supabaseClient.auth.signUp({email:$("#authEmail").value,password:$("#authPassword").value,options:{data:{name:$("#authName").value}}}):await supabaseClient.auth.signInWithPassword({email:$("#authEmail").value,password:$("#authPassword").value});if(res.error)throw res.error;if(res.data.user)enterApp(res.data.user);else $("#authError").textContent="Check your email to confirm your account."}catch(err){$("#authError").textContent=err.message||"Authentication failed."}};
-$("#logout").onclick=async()=>{if(supabaseClient)await supabaseClient.auth.signOut();location.reload()};
+function enterApp(u){currentUser=u;$("#auth").style.display="none";$("#app").style.display="block";const n=name();$("#avatar").textContent=(n||"N").trim().charAt(0).toUpperCase();render()}
+
+$("#logout").onclick=async()=>{try{await clerk?.signOut()}finally{location.reload()}};
+
 
 /* Loader */
 let pct=0;const pctTimer=setInterval(()=>{pct=Math.min(100,pct+Math.ceil(Math.random()*10));$("#loaderPct").textContent=String(pct).padStart(2,"0")+"%";if(pct>=100)clearInterval(pctTimer)},150);
 setTimeout(()=>{$("#loader").style.opacity="0";$("#loader").style.visibility="hidden"},2550);
 
-if(supabaseClient){supabaseClient.auth.getSession().then(({data:{session}})=>{if(session)enterApp(session.user)})}
-lucide.createIcons();
+(async()=>{
+  try{
+    await initClerk();
+    if(clerk.isSignedIn){enterApp(clerk.user)}else{mountClerkAuth("signIn")}
+  }catch(err){
+    $("#clerkAuth").innerHTML=`<div class="auth-error" style="display:block">${escapeHtml(err.message||"Clerk could not be initialized.")}</div>`;
+  }
+  lucide.createIcons();
+})();
 </script>
 </body>
 </html>
