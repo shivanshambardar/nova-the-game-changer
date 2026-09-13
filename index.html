@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0a">
+<meta name="description" content="NOVA — a calm, intelligent operating system for student life.">
+<title>NOVA — Student Life OS</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+:root{
+  --bg:#090909;--surface:#10100f;--surface2:#151513;--surface3:#1b1b18;
+  --text:#f1eee5;--muted:#85857d;--faint:#5d5d57;--line:#282824;
+  --accent:#d9d1be;--accent2:#b8b09d;--success:#aebaa8;--danger:#c39c95;
+  --radius:20px;--shadow:0 30px 90px rgba(0,0,0,.42);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow-x:hidden}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+::selection{background:#d9d1be;color:#111}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");opacity:.028}
+body:after{content:"";position:fixed;width:70vw;height:70vw;right:-35vw;top:-40vw;background:radial-gradient(circle,rgba(225,216,193,.08),transparent 65%);pointer-events:none}
+
+/* LOADER */
+#loader{position:fixed;inset:0;background:#080808;z-index:9999;display:grid;place-items:center;transition:opacity .8s ease,visibility .8s}
+.loader-wrap{width:min(820px,86vw);position:relative}
+.loader-top{display:flex;justify-content:space-between;font:11px "DM Mono";letter-spacing:.14em;color:#696962}
+.loader-title{font:600 clamp(54px,11vw,135px)/.82 "Space Grotesk";letter-spacing:-.08em;margin:70px 0 25px}
+.loader-title span{display:block;opacity:0;transform:translateY(35px);animation:loaderIn .8s forwards}
+.loader-title span:nth-child(2){animation-delay:.13s}
+.loader-sub{color:#77776f;opacity:0;animation:fadeIn .8s .45s forwards}
+.loader-grid{position:absolute;right:0;top:42px;width:150px;height:150px;border:1px solid #252521;opacity:.5;background:linear-gradient(90deg,transparent 49%,#272721 50%,transparent 51%),linear-gradient(transparent 49%,#272721 50%,transparent 51%);background-size:30px 30px;transform:rotate(8deg);animation:gridFloat 4s ease-in-out infinite}
+.loader-orbit{position:absolute;inset:18px;border:1px solid #37372f;border-radius:50%;animation:spin 7s linear infinite}
+.loader-orbit:after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:#d9d1be;top:-3px;left:50%}
+.loader-line{height:1px;background:#23231f;margin-top:38px;overflow:hidden}
+.loader-line i{display:block;height:100%;background:#ded7c7;width:0;animation:load 2.25s cubic-bezier(.65,0,.2,1) forwards}
+@keyframes loaderIn{to{opacity:1;transform:none}}@keyframes fadeIn{to{opacity:1}}@keyframes load{to{width:100%}}
+@keyframes gridFloat{50%{transform:rotate(2deg) translateY(8px)}}@keyframes spin{to{transform:rotate(360deg)}}
+
+/* AUTH */
+.auth{min-height:100vh;display:grid;place-items:center;padding:25px;background:radial-gradient(circle at 50% 0,rgba(210,202,180,.09),transparent 34%)}
+.auth-card{width:min(470px,100%);padding:40px;background:rgba(16,16,15,.84);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(24px);animation:cardIn .8s .2s both}
+@keyframes cardIn{from{opacity:0;transform:translateY(18px) scale(.985)}to{opacity:1;transform:none}}
+.eyebrow,.label{font:500 10px "DM Mono";letter-spacing:.16em;text-transform:uppercase;color:#77776f}
+.auth-logo{font:700 28px "Space Grotesk";letter-spacing:-.07em;margin-bottom:50px}
+.auth h1{font:600 46px/1 "Space Grotesk";letter-spacing:-.065em;margin:0 0 12px}
+.auth-desc{color:var(--muted);line-height:1.6;margin:0 0 30px}
+.field{display:grid;gap:7px;margin:13px 0}
+.field label{font-size:11px;color:#8d8d84}
+.field input,.field textarea,.field select{width:100%;background:#0c0c0b;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:13px 14px;outline:none;transition:.2s}
+.field textarea{resize:vertical;min-height:100px}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:#57574e;box-shadow:0 0 0 3px rgba(215,208,188,.04)}
+.btn{border:1px solid var(--line);background:var(--accent);color:#151511;padding:12px 16px;border-radius:12px;font-weight:700;transition:transform .2s,background .2s,border .2s}
+.btn:hover{transform:translateY(-2px);background:#ebe5d5}
+.btn.secondary{background:#171714;color:var(--text)}
+.btn.secondary:hover{background:#20201d;border-color:#3c3c36}
+.btn.ghost{background:transparent;color:var(--muted);border-color:transparent}
+.btn.danger{background:transparent;color:var(--danger);border-color:#40302e}
+.full{width:100%}
+.auth-switch{text-align:center;color:#707069;font-size:12px;margin-top:20px}
+.auth-switch button{background:none;border:0;color:var(--text);text-decoration:underline}
+.auth-error{min-height:18px;color:var(--danger);font-size:12px;margin-top:10px}
+
+/* APP SHELL */
+#app{display:none;min-height:100vh}
+.shell{display:flex;min-height:100vh}
+.sidebar{position:fixed;z-index:50;left:0;top:0;bottom:0;width:245px;padding:25px 16px;background:rgba(9,9,8,.78);border-right:1px solid var(--line);backdrop-filter:blur(20px)}
+.brand{font:700 26px "Space Grotesk";letter-spacing:-.08em;padding:0 12px 32px}
+.nav{display:grid;gap:4px}
+.nav button{width:100%;border:0;background:transparent;color:#77776f;padding:11px 12px;border-radius:10px;text-align:left;display:flex;align-items:center;gap:12px;transition:.2s}
+.nav button svg{width:17px;height:17px;stroke-width:1.8}
+.nav button:hover,.nav button.active{background:#161613;color:var(--text)}
+.nav button.active svg{stroke-width:2.5}
+.side-bottom{position:absolute;left:16px;right:16px;bottom:20px}
+.main{margin-left:245px;width:calc(100% - 245px);padding:28px 4vw 70px;max-width:1600px}
+.topbar{height:48px;display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.top-date{font:11px "DM Mono";color:#74746d;letter-spacing:.04em}
+.user-menu{display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;background:#151512;font-weight:700;font-size:13px}
+.page{display:none}.page.active{display:block;animation:pageIn .35s ease both}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.page-head{margin-bottom:20px}
+.page-head h1{font:600 clamp(38px,5vw,68px)/.95 "Space Grotesk";letter-spacing:-.075em;margin:0}
+.page-head p{color:var(--muted);margin:10px 0 0}
+.hero{position:relative;overflow:hidden;padding:30px;border:1px solid var(--line);border-radius:26px;background:radial-gradient(circle at 92% 8%,rgba(218,209,187,.09),transparent 30%),linear-gradient(145deg,#151512,#10100f);margin-bottom:14px}
+.hero:after{content:"";position:absolute;width:260px;height:260px;border:1px solid rgba(220,212,190,.08);border-radius:50%;right:-110px;bottom:-130px}
+.hero-row{display:flex;justify-content:space-between;gap:20px;align-items:end}
+.hero h1{font:600 clamp(38px,5vw,64px)/.92 "Space Grotesk";letter-spacing:-.075em;margin:10px 0}
+.lead{color:var(--muted);line-height:1.55}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:linear-gradient(145deg,#151513,#10100f);border:1px solid var(--line);border-radius:20px;padding:21px;box-shadow:0 10px 40px rgba(0,0,0,.13)}
+.card h3{font:600 18px "Space Grotesk";margin:0 0 8px}.card-sub{color:var(--muted);font-size:12px}
+.metric{font:600 40px "Space Grotesk";letter-spacing:-.06em;margin-top:7px}
+.metric-small{font-size:12px;color:var(--muted)}
+.progress{height:5px;background:#252520;border-radius:99px;overflow:hidden;margin:14px 0 6px}.progress i{height:100%;display:block;background:#d6cfbe;border-radius:inherit;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.list{display:grid}.list-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid #23231f}.list-row:last-child{border-bottom:0}
+.row-main{display:flex;align-items:center;gap:11px;min-width:0}.row-text{min-width:0}.row-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.row-meta{font-size:11px;color:#707069;margin-top:3px}
+.check{width:19px;height:19px;min-width:19px;border-radius:50%;border:1px solid #505049;background:transparent;display:grid;place-items:center;padding:0;color:#111;transition:.2s}.check svg{width:12px}.check.done{background:#d8d1be;border-color:#d8d1be}
+.strike{text-decoration:line-through;color:#60605a}
+.tag{font:10px "DM Mono";border:1px solid var(--line);padding:5px 8px;border-radius:99px;color:#96968e;white-space:nowrap}
+.empty{padding:30px 10px;text-align:center;color:#62625b;font-size:12px}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:14px}
+.quick{padding:15px;border:1px solid var(--line);background:#121210;border-radius:13px;color:#aaa9a1;text-align:left;transition:.2s}.quick:hover{border-color:#45453d;transform:translateY(-2px);color:var(--text)}.quick svg{width:17px;margin-bottom:9px}.quick b{display:block;font-size:12px}
+.calendar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.month-title{font:600 20px "Space Grotesk"}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.weekday{font:10px "DM Mono";color:#686861;padding:7px}.cal-day{min-height:105px;border:1px solid var(--line);border-radius:11px;padding:9px;background:#11110f}.cal-day.today{border-color:#77776d}.cal-day.muted-day{opacity:.35}.cal-day b{font-size:11px}.cal-event{font-size:9px;background:#23231f;border-radius:6px;padding:5px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tool-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.tool{min-height:145px;cursor:pointer;transition:.25s}.tool:hover{transform:translateY(-4px);border-color:#46463e}.tool svg{width:21px;margin-bottom:18px}.tool h3{margin-bottom:5px}
+.exam-card{position:relative;overflow:hidden}.exam-card .exam-days{font:600 48px "Space Grotesk";letter-spacing:-.07em;margin:10px 0}.exam-actions{display:flex;gap:7px;margin-top:16px}
+.notes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.note{min-height:170px}.note-title{font:600 19px "Space Grotesk";margin:10px 0}.note-body{font-size:12px;line-height:1.6;color:#898981}
+.timer-card{text-align:center;padding:48px 20px}.timer-label{font:10px "DM Mono";letter-spacing:.16em;color:#74746c}.timer-number{font:600 clamp(72px,13vw,135px)/1 "Space Grotesk";letter-spacing:-.09em;margin:20px 0}.timer-controls{display:flex;justify-content:center;gap:8px}.session-preset{display:flex;justify-content:center;gap:7px;margin-top:20px}.session-preset button{border:1px solid var(--line);background:#151512;color:#888;padding:7px 11px;border-radius:99px;font:10px "DM Mono"}.session-preset button.active{background:#d8d1be;color:#151511}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.bar-row{display:grid;grid-template-columns:90px 1fr 35px;align-items:center;gap:10px;margin:13px 0;font-size:11px;color:#888}.bar{height:6px;background:#252520;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:#bdb6a5;border-radius:inherit}
+.modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.72);display:none;place-items:center;padding:18px;backdrop-filter:blur(10px)}.modal.open{display:grid}.modal-box{width:min(570px,100%);max-height:90vh;overflow:auto;background:#131311;border:1px solid var(--line);border-radius:23px;padding:24px;box-shadow:var(--shadow);animation:modalIn .25s ease}.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.modal-head h3{font:600 24px "Space Grotesk";margin:0}.close{border:0;background:none;color:#777;font-size:24px}.modal-actions{display:flex;gap:8px;margin-top:18px}.result{font:600 38px "Space Grotesk";letter-spacing:-.06em;text-align:center;margin-top:16px}
+.toast{position:fixed;right:20px;bottom:20px;z-index:300;background:#ded7c7;color:#151511;padding:12px 16px;border-radius:12px;font-size:12px;transform:translateY(120px);transition:.35s;box-shadow:var(--shadow)}.toast.show{transform:none}
+.command{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.65);display:none;align-items:flex-start;justify-content:center;padding-top:13vh;backdrop-filter:blur(8px)}.command.open{display:flex}.command-box{width:min(620px,92vw);background:#141412;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}.command-input{width:100%;border:0;border-bottom:1px solid var(--line);background:#0f0f0e;color:var(--text);padding:18px;outline:none}.command-list button{width:100%;border:0;background:none;color:#aaa;text-align:left;padding:14px 18px;display:flex;gap:12px;align-items:center}.command-list button:hover{background:#1c1c19;color:#fff}
+.mobile-add{display:none}
+
+/* MOBILE */
+@media(max-width:1050px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}.tool-grid{grid-template-columns:repeat(2,1fr)}.notes{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){
+  .sidebar{top:auto;bottom:0;width:100%;height:68px;padding:7px 8px;border-right:0;border-top:1px solid var(--line);display:flex;align-items:center}
+  .brand,.side-bottom{display:none}.nav{width:100%;grid-template-columns:repeat(6,1fr);display:grid}.nav button{padding:9px;justify-content:center}.nav button span{display:none}.nav button svg{width:19px;height:19px}
+  .main{margin-left:0;width:100%;padding:18px 14px 92px}.topbar{margin-bottom:20px}.hero{padding:23px}.hero-row{display:block}.hero .actions{margin-top:20px}.g2,.g3,.g4,.tool-grid,.notes,.stats-grid{grid-template-columns:1fr}.quick-grid{grid-template-columns:repeat(2,1fr)}
+  .calendar{grid-template-columns:repeat(2,1fr)}.weekday{display:none}.cal-day{min-height:85px}.calendar .cal-day:nth-child(n){display:block}
+  .mobile-add{display:grid;position:fixed;right:18px;bottom:83px;width:50px;height:50px;border-radius:50%;border:1px solid #3c3c35;background:#ded7c7;color:#151511;place-items:center;z-index:40;box-shadow:0 10px 30px #000}
+}
+@media(max-width:420px){.auth-card{padding:27px}.auth h1{font-size:39px}.quick-grid{grid-template-columns:1fr}.hero h1{font-size:42px}}
+</style>
+</head>
+
+<body>
+<!-- ===========================
+     NOVA — STUDENT LIFE OS
+     Single-file production-ready frontend.
+     Supabase is optional: without credentials,
+     NOVA securely falls back to local browser storage.
+============================ -->
+
+<div id="loader">
+  <div class="loader-wrap">
+    <div class="loader-top"><span>NOVA / STUDENT LIFE OS</span><span id="loaderPct">00%</span></div>
+    <div class="loader-grid"><div class="loader-orbit"></div></div>
+    <div class="loader-title"><span>YOUR TIME.</span><span>YOUR SYSTEM.</span></div>
+    <div class="loader-sub">A calmer way to get things done.</div>
+    <div class="loader-line"><i></i></div>
+  </div>
+</div>
+
+<section id="auth" class="auth">
+  <div class="auth-card">
+    <div class="auth-logo">NOVA</div>
+    <div class="eyebrow">Student Life OS</div>
+    <h1 id="authTitle">Welcome back.</h1>
+    <p class="auth-desc" id="authDesc">Everything you need to stay ahead, without the noise.</p>
+    <form id="authForm">
+      <div class="field" id="nameWrap" style="display:none"><label>YOUR NAME</label><input id="authName" autocomplete="name" placeholder="What should NOVA call you?"></div>
+      <div class="field"><label>EMAIL</label><input id="authEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div>
+      <div class="field"><label>PASSWORD</label><input id="authPassword" type="password" minlength="6" autocomplete="current-password" required placeholder="••••••••"></div>
+      <button class="btn full" id="authButton">Sign in →</button>
+      <div class="auth-error" id="authError"></div>
+    </form>
+    <div class="auth-switch"><span id="switchLabel">New here?</span> <button type="button" id="switchMode">Create account</button></div>
+  </div>
+</section>
+
+<div id="app">
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">NOVA</div>
+      <nav class="nav">
+        <button class="active" data-page="home"><i data-lucide="house"></i><span>Home</span></button>
+        <button data-page="planner"><i data-lucide="calendar-days"></i><span>Planner</span></button>
+        <button data-page="study"><i data-lucide="timer"></i><span>Study</span></button>
+        <button data-page="exams"><i data-lucide="graduation-cap"></i><span>Exams</span></button>
+        <button data-page="notes"><i data-lucide="notebook-pen"></i><span>Notes</span></button>
+        <button data-page="tools"><i data-lucide="wrench"></i><span>Tools</span></button>
+        <button data-page="insights"><i data-lucide="chart-no-axes-combined"></i><span>Insights</span></button>
+        <button data-page="profile"><i data-lucide="settings-2"></i><span>Profile</span></button>
+      </nav>
+      <div class="side-bottom"><button class="btn secondary full" id="logout"><i data-lucide="log-out"></i> Log out</button></div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="top-date" id="topDate"></div>
+        <div class="user-menu"><button class="btn ghost" id="commandBtn">⌘ K</button><div class="avatar" id="avatar">N</div></div>
+      </div>
+
+      <!-- HOME -->
+      <section class="page active" id="home">
+        <div class="hero">
+          <div class="hero-row">
+            <div><div class="label">Today</div><h1 id="greeting">Good morning.</h1><div class="lead" id="homeMessage">Let's make today count.</div></div>
+            <div class="actions"><button class="btn" id="fixDay">⚡ Fix my day</button><button class="btn secondary" id="quickAdd">＋ Add</button></div>
+          </div>
+        </div>
+        <div class="grid g4">
+          <div class="card"><div class="label">Tasks left</div><div class="metric" id="mTasks">0</div><div class="metric-small">for today</div></div>
+          <div class="card"><div class="label">Next exam</div><div class="metric" id="mExam">—</div><div class="metric-small" id="mExamName">Nothing scheduled</div></div>
+          <div class="card"><div class="label">Focus time</div><div class="metric" id="mFocus">0m</div><div class="metric-small">today</div></div>
+          <div class="card"><div class="label">Completion</div><div class="metric" id="mCompletion">0%</div><div class="metric-small">today</div></div>
+        </div>
+        <div class="quick-grid">
+          <button class="quick" data-action="task"><i data-lucide="check"></i><b>Add task</b><span>Get it out of your head.</span></button>
+          <button class="quick" data-action="exam"><i data-lucide="graduation-cap"></i><b>Add exam</b><span>Start a countdown.</span></button>
+          <button class="quick" data-action="note"><i data-lucide="pen-line"></i><b>Quick note</b><span>Capture an idea.</span></button>
+          <button class="quick" data-action="study"><i data-lucide="play"></i><b>Start focus</b><span>Do the next thing.</span></button>
+        </div>
+        <div class="grid g2" style="margin-top:14px">
+          <div class="card"><h3>Today's plan</h3><div class="list" id="todayTasks"></div></div>
+          <div class="card"><h3>Coming up</h3><div class="list" id="homeExams"></div></div>
+        </div>
+      </section>
+
+      <!-- PLANNER -->
+      <section class="page" id="planner">
+        <div class="page-head"><div class="label">Planner</div><h1>Make room for what matters.</h1><p>Tasks, classes and deadlines in one calm place.</p></div>
+        <div class="actions" style="margin-bottom:14px"><button class="btn" id="plannerAddTask">＋ Task</button><button class="btn secondary" id="plannerAddClass">＋ Class</button></div>
+        <div class="card">
+          <div class="calendar-head"><button class="btn secondary" id="prevMonth">←</button><div class="month-title" id="monthTitle"></div><button class="btn secondary" id="nextMonth">→</button></div>
+          <div class="calendar" id="calendar"></div>
+        </div>
+        <div class="card" style="margin-top:14px"><h3>All tasks</h3><div class="list" id="allTasks"></div></div>
+      </section>
+
+      <!-- STUDY -->
+      <section class="page" id="study">
+        <div class="page-head"><div class="label">Study mode</div><h1>Deep work, without the noise.</h1><p>Put your phone down. Give one thing your full attention.</p></div>
+        <div class="card timer-card">
+          <div class="timer-label" id="timerLabel">FOCUS SESSION</div>
+          <div class="timer-number" id="timerNumber">25:00</div>
+          <div class="timer-controls"><button class="btn" id="timerStart">Start session</button><button class="btn secondary" id="timerReset">Reset</button></div>
+          <div class="session-preset"><button data-min="25" class="active">25 MIN</button><button data-min="50">50 MIN</button><button data-min="90">90 MIN</button></div>
+          <div class="lead" id="timerStatus" style="margin-top:20px">Ready when you are.</div>
+        </div>
+        <div class="grid g3" style="margin-top:14px">
+          <div class="card"><div class="label">Today</div><div class="metric" id="studyToday">0m</div><div class="metric-small">focused</div></div>
+          <div class="card"><div class="label">Sessions</div><div class="metric" id="studySessions">0</div><div class="metric-small">completed</div></div>
+          <div class="card"><div class="label">Streak</div><div class="metric" id="studyStreak">0d</div><div class="metric-small">consistent</div></div>
+        </div>
+      </section>
+
+      <!-- EXAMS -->
+      <section class="page" id="exams">
+        <div class="page-head"><div class="label">Exam center</div><h1>Turn pressure into a plan.</h1><p>Know what is next, how ready you are, and where to focus.</p></div>
+        <button class="btn" id="examAdd">＋ Add exam</button>
+        <div class="grid g2" id="examCards" style="margin-top:14px"></div>
+      </section>
+
+      <!-- NOTES -->
+      <section class="page" id="notes">
+        <div class="page-head"><div class="label">Notes</div><h1>Catch it before it disappears.</h1><p>Quick notes for ideas, revision points and reminders.</p></div>
+        <button class="btn" id="noteAdd">＋ New note</button>
+        <div class="notes" id="notesGrid" style="margin-top:14px"></div>
+      </section>
+
+      <!-- TOOLS -->
+      <section class="page" id="tools">
+        <div class="page-head"><div class="label">Student toolbox</div><h1>Small tools. Big relief.</h1><p>Useful utilities without leaving NOVA.</p></div>
+        <div class="tool-grid">
+          <div class="card tool" data-tool="gpa"><i data-lucide="sigma"></i><h3>GPA / CGPA</h3><p class="card-sub">Calculate your academic average.</p></div>
+          <div class="card tool" data-tool="percent"><i data-lucide="percent"></i><h3>Percentage</h3><p class="card-sub">Marks to percentage instantly.</p></div>
+          <div class="card tool" data-tool="grade"><i data-lucide="award"></i><h3>Grade</h3><p class="card-sub">Convert percentage to a grade.</p></div>
+          <div class="card tool" data-tool="word"><i data-lucide="type"></i><h3>Word counter</h3><p class="card-sub">Words, characters and reading time.</p></div>
+          <div class="card tool" data-tool="calc"><i data-lucide="calculator"></i><h3>Calculator</h3><p class="card-sub">Quick everyday calculations.</p></div>
+          <div class="card tool" data-tool="countdown"><i data-lucide="hourglass"></i><h3>Countdown</h3><p class="card-sub">Days until any date.</p></div>
+          <div class="card tool" data-tool="pomodoro"><i data-lucide="timer-reset"></i><h3>Focus timer</h3><p class="card-sub">Start a distraction-free session.</p></div>
+          <div class="card tool" data-tool="days"><i data-lucide="calendar-range"></i><h3>Days between</h3><p class="card-sub">Calculate a date range.</p></div>
+          <div class="card tool" data-tool="average"><i data-lucide="bar-chart-3"></i><h3>Average</h3><p class="card-sub">Find the average of numbers.</p></div>
+        </div>
+      </section>
+
+      <!-- INSIGHTS -->
+      <section class="page" id="insights">
+        <div class="page-head"><div class="label">Insights</div><h1>See how you actually work.</h1><p>NOVA turns your activity into useful signals, not vanity metrics.</p></div>
+        <div class="grid g3">
+          <div class="card"><div class="label">Total focus</div><div class="metric" id="iFocus">0m</div><div class="metric-small">all recorded sessions</div></div>
+          <div class="card"><div class="label">Tasks completed</div><div class="metric" id="iDone">0</div><div class="metric-small">all time</div></div>
+          <div class="card"><div class="label">Completion rate</div><div class="metric" id="iRate">0%</div><div class="metric-small">across all tasks</div></div>
+        </div>
+        <div class="card" style="margin-top:14px"><h3>Last 7 days</h3><div id="weekBars"></div></div>
+      </section>
+
+      <!-- PROFILE -->
+      <section class="page" id="profile">
+        <div class="page-head"><div class="label">Profile</div><h1 id="profileName">Student</h1><p id="profileEmail"></p></div>
+        <div class="grid g2">
+          <div class="card"><h3>Your account</h3><div class="field"><label>DISPLAY NAME</label><input id="profileDisplayName"></div><button class="btn" id="saveProfile">Save changes</button></div>
+          <div class="card"><h3>Storage & sync</h3><p class="card-sub" id="storageStatus">Checking connection…</p><p class="card-sub">With Supabase configured, authentication and sync can be connected to your database. Without it, NOVA keeps data locally in this browser.</p><button class="btn secondary" id="clearLocal">Clear local data</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <button class="mobile-add" id="mobileAdd"><i data-lucide="plus"></i></button>
+</div>
+
+<div class="modal" id="modal"><div class="modal-box"><div class="modal-head"><h3 id="modalTitle"></h3><button class="close" id="modalClose">×</button></div><div id="modalBody"></div></div></div>
+<div class="command" id="command"><div class="command-box"><input class="command-input" id="commandInput" placeholder="Jump to anything…"><div class="command-list" id="commandList"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= SUPABASE =================
+Replace with your own project values.
+Never use a service-role/secret key here.
+Supabase Dashboard → Project Settings → API.
+For full database sync, create tables matching:
+profiles, tasks, exams, notes, study_sessions, classes.
+This frontend works locally even before Supabase is configured.
+============================================= */
+const SUPABASE_URL="YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY";
+const supabaseClient=(window.supabase && SUPABASE_URL.startsWith("http"))?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+
+const STORE="nova_v3";
+const defaultData={tasks:[],exams:[],notes:[],classes:[],sessions:[],profile:{name:""}};
+let data=JSON.parse(localStorage.getItem(STORE)||JSON.stringify(defaultData));
+data={...defaultData,...data,profile:{...defaultData.profile,...(data.profile||{})}};
+let currentUser=null,isSignup=false,monthCursor=new Date();monthCursor.setDate(1);
+let timer={seconds:1500,running:false,interval:null,total:25};
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random();
+const today=()=>{const d=new Date();return d.toISOString().slice(0,10)};
+const escapeHtml=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+const dateLabel=d=>new Date(d+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
+const daysUntil=d=>Math.ceil((new Date(d+"T23:59:59")-new Date())/86400000);
+function save(){localStorage.setItem(STORE,JSON.stringify(data));render();}
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2300)}
+function greeting(){const h=new Date().getHours();return h<12?"Good morning.":h<18?"Good afternoon.":"Good evening."}
+function name(){return data.profile.name||currentUser?.user_metadata?.name||currentUser?.name||currentUser?.email?.split("@")[0]||"Student"}
+function openModal(title,body){$("#modalTitle").textContent=title;$("#modalBody").innerHTML=body;$("#modal").classList.add("open");setTimeout(()=>$("#modalBody input, #modalBody textarea")?.focus(),50);lucide.createIcons()}
+function closeModal(){$("#modal").classList.remove("open")}
+$("#modalClose").onclick=closeModal;$("#modal").onclick=e=>{if(e.target.id==="modal")closeModal()};
+
+function taskRow(t){
+ return `<div class="list-row"><div class="row-main"><button class="check ${t.done?"done":""}" onclick="toggleTask('${t.id}')">${t.done?'<i data-lucide="check"></i>':""}</button><div class="row-text"><div class="row-title ${t.done?"strike":""}">${escapeHtml(t.title)}</div><div class="row-meta">${t.date?dateLabel(t.date):"No date"}${t.priority?" · "+escapeHtml(t.priority):""}${t.time?" · "+escapeHtml(t.time):""}</div></div></div><button class="close" onclick="deleteTask('${t.id}')">×</button></div>`;
+}
+window.toggleTask=id=>{const t=data.tasks.find(x=>x.id===id);if(t){t.done=!t.done;save();toast(t.done?"Task complete ✓":"Task reopened")}};
+window.deleteTask=id=>{data.tasks=data.tasks.filter(x=>x.id!==id);save();toast("Task removed")};
+window.deleteExam=id=>{data.exams=data.exams.filter(x=>x.id!==id);save();toast("Exam removed")};
+window.bumpExam=id=>{const e=data.exams.find(x=>x.id===id);if(e){e.progress=Math.min(100,(e.progress||0)+10);save();toast("Preparation +10%")}};
+window.deleteNote=id=>{data.notes=data.notes.filter(x=>x.id!==id);save();toast("Note deleted")};
+
+function addTask(){
+ openModal("Add task",`<form id="taskForm">
+ <div class="field"><label>TASK</label><input id="fTitle" required placeholder="Finish physics assignment"></div>
+ <div class="grid g2"><div class="field"><label>DATE</label><input id="fDate" type="date" value="${today()}"></div><div class="field"><label>TIME</label><input id="fTime" type="time"></div></div>
+ <div class="field"><label>PRIORITY</label><select id="fPriority"><option>Normal</option><option>High</option><option>Low</option></select></div>
+ <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn">Add task →</button></div></form>`);
+ $("#taskForm").onsubmit=e=>{e.preventDefault();data.tasks.push({id:uid(),title:$("#fTitle").value,date:$("#fDate").value,time:$("#fTime").value,priority:$("#fPriority").value,done:false});save();closeModal();toast("Task added")};
+}
+function addClass(){
+ openModal("Add class",`<form id="classForm"><div class="field"><label>CLASS</label><input id="cName" required placeholder="Mathematics"></div><div class="grid g2"><div class="field"><label>DATE</label><input id="cDate" type="date" value="${today()}"></div><div class="field"><label>TIME</label><input id="cTime" type="time"></div></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn">Add class →</button></div></form>`);
+ $("#classForm").onsubmit=e=>{e.preventDefault();data.classes.push({id:uid(),name:$("#cName").value,date:$("#cDate").value,time:$("#cTime").value});save();closeModal();toast("Class added")};
+}
+function addExam(){
+ openModal("Add exam",`<form id="examForm"><div class="field"><label>EXAM / SUBJECT</label><input id="xName" required placeholder="Mathematics"></div><div class="field"><label>DATE</label><input id="xDate" type="date" required></div><div class="field"><label>PREPARATION</label><input id="xProg" type="number" min="0" max="100" value="0"></div><div class="field"><label>CHAPTERS / SCOPE</label><input id="xScope" placeholder="Calculus, algebra, probability"></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn">Add exam →</button></div></form>`);
+ $("#examForm").onsubmit=e=>{e.preventDefault();data.exams.push({id:uid(),name:$("#xName").value,date:$("#xDate").value,progress:+$("#xProg").value,scope:$("#xScope").value});save();closeModal();toast("Exam added")};
+}
+function addNote(){
+ openModal("New note",`<form id="noteForm"><div class="field"><label>TITLE</label><input id="nTitle" required placeholder="Revision idea"></div><div class="field"><label>NOTE</label><textarea id="nBody" placeholder="Write anything…"></textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancel</button><button class="btn">Save note →</button></div></form>`);
+ $("#noteForm").onsubmit=e=>{e.preventDefault();data.notes.unshift({id:uid(),title:$("#nTitle").value,body:$("#nBody").value,date:today()});save();closeModal();toast("Note saved")};
+}
+function fixDay(){
+ const pending=data.tasks.filter(t=>!t.done);
+ if(!pending.length){toast("Your task list is clear ✓");return}
+ const sorted=[...pending].sort((a,b)=>({High:0,Normal:1,Low:2}[a.priority]??1)-({High:0,Normal:1,Low:2}[b.priority]??1));
+ const items=sorted.slice(0,5).map((t,i)=>`<div class="list-row"><div><b>${i+1}. ${escapeHtml(t.title)}</b><div class="row-meta">${t.priority||"Normal"} priority</div></div><span class="tag">${i===0?"START HERE":i*25+" MIN"}</span></div>`).join("");
+ openModal("Your day, simplified",`<p class="lead">NOVA prioritized your unfinished work. Start at the top, take short breaks, and don't try to finish everything at once.</p><div class="list">${items}</div><button class="btn full" style="margin-top:16px" onclick="closeModal();showPage('planner')">Open planner →</button>`);
+}
+function renderCalendar(){
+ const y=monthCursor.getFullYear(),m=monthCursor.getMonth(),first=new Date(y,m,1),last=new Date(y,m+1,0),start=(first.getDay()+6)%7;
+ $("#monthTitle").textContent=first.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+ const names=["MON","TUE","WED","THU","FRI","SAT","SUN"];let out=names.map(x=>`<div class="weekday">${x}</div>`).join("");
+ for(let i=0;i<start;i++)out+=`<div class="cal-day muted-day"></div>`;
+ for(let d=1;d<=last.getDate();d++){
+  const iso=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`,items=[
+   ...data.tasks.filter(x=>x.date===iso).map(x=>({title:x.title,type:"task"})),
+   ...data.exams.filter(x=>x.date===iso).map(x=>({title:x.name,type:"exam"})),
+   ...data.classes.filter(x=>x.date===iso).map(x=>({title:x.name,type:"class"}))
+  ];
+  out+=`<div class="cal-day ${iso===today()?"today":""}"><b>${d}</b>${items.slice(0,3).map(x=>`<div class="cal-event">${escapeHtml(x.title)}</div>`).join("")}</div>`;
+ }
+ $("#calendar").innerHTML=out;
+}
+function render(){
+ const t=data.tasks,e=data.exams,n=data.notes,s=data.sessions;
+ $("#topDate").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+ $("#greeting").textContent=greeting();$("#homeMessage").textContent=`${name()}, you have ${t.filter(x=>x.date===today()&&!x.done).length} things left today.`;
+ const todayTasks=t.filter(x=>x.date===today()),doneToday=todayTasks.filter(x=>x.done).length;
+ $("#mTasks").textContent=todayTasks.filter(x=>!x.done).length;
+ const next=[...e].filter(x=>daysUntil(x.date)>=0).sort((a,b)=>a.date.localeCompare(b.date))[0];
+ $("#mExam").textContent=next?Math.max(0,daysUntil(next.date))+"d":"—";$("#mExamName").textContent=next?escapeHtml(next.name):"Nothing scheduled";
+ const focus=s.filter(x=>x.date===today()).reduce((a,x)=>a+(x.minutes||0),0);$("#mFocus").textContent=focus>=60?Math.floor(focus/60)+"h "+focus%60+"m":focus+"m";
+ $("#mCompletion").textContent=(todayTasks.length?Math.round(doneToday/todayTasks.length*100):0)+"%";
+ $("#todayTasks").innerHTML=todayTasks.length?todayTasks.map(taskRow).join(""):'<div class="empty">No tasks for today.<br>Add one thing worth finishing.</div>';
+ const upcoming=[...e].filter(x=>daysUntil(x.date)>=0).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+ $("#homeExams").innerHTML=upcoming.length?upcoming.map(x=>`<div class="list-row"><div><div class="row-title">${escapeHtml(x.name)}</div><div class="row-meta">${dateLabel(x.date)}</div></div><span class="tag">${Math.max(0,daysUntil(x.date))}d</span></div>`).join(""):'<div class="empty">No upcoming exams.</div>';
+ $("#allTasks").innerHTML=t.length?[...t].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(taskRow).join(""):'<div class="empty">Your planner is clear.</div>';
+ renderCalendar();
+ $("#examCards").innerHTML=upcoming.length?upcoming.map(x=>`<div class="card exam-card"><div class="label">${Math.max(0,daysUntil(x.date))} DAYS LEFT</div><div class="exam-days">${Math.max(0,daysUntil(x.date))}</div><h3>${escapeHtml(x.name)}</h3><div class="card-sub">${dateLabel(x.date)}</div>${x.scope?`<p class="card-sub" style="margin-top:10px">${escapeHtml(x.scope)}</p>`:""}<div class="progress"><i style="width:${x.progress||0}%"></i></div><div class="card-sub">${x.progress||0}% prepared</div><div class="exam-actions"><button class="btn secondary" onclick="bumpExam('${x.id}')">+10%</button><button class="btn secondary" onclick="deleteExam('${x.id}')">Delete</button></div></div>`).join(""):'<div class="card empty">No exams yet. Add one and let the countdown begin.</div>';
+ $("#notesGrid").innerHTML=n.length?n.map(x=>`<div class="card note"><div class="label">${dateLabel(x.date)}</div><div class="note-title">${escapeHtml(x.title)}</div><div class="note-body">${escapeHtml(x.body).replace(/\n/g,"<br>")}</div><button class="btn ghost" style="padding:8px 0;margin-top:10px" onclick="deleteNote('${x.id}')">Delete</button></div>`).join(""):'<div class="card empty">No notes yet. Capture something before you forget it.</div>';
+ const allMinutes=s.reduce((a,x)=>a+(x.minutes||0),0),done=t.filter(x=>x.done).length;
+ $("#iFocus").textContent=allMinutes>=60?Math.floor(allMinutes/60)+"h "+allMinutes%60+"m":allMinutes+"m";$("#iDone").textContent=done;$("#iRate").textContent=(t.length?Math.round(done/t.length*100):0)+"%";
+ const days=[];for(let i=6;i>=0;i--){let d=new Date();d.setDate(d.getDate()-i);let iso=d.toISOString().slice(0,10),mins=s.filter(x=>x.date===iso).reduce((a,x)=>a+(x.minutes||0),0);days.push({iso,mins,label:d.toLocaleDateString(undefined,{weekday:"short"})})}
+ $("#weekBars").innerHTML=days.map(d=>`<div class="bar-row"><span>${d.label}</span><div class="bar"><i style="width:${Math.min(100,d.mins/120*100)}%"></i></div><span>${d.mins}m</span></div>`).join("");
+ $("#studyToday").textContent=focus>=60?Math.floor(focus/60)+"h "+focus%60+"m":focus+"m";$("#studySessions").textContent=s.filter(x=>x.date===today()).length;$("#studyStreak").textContent=studyStreak()+"d";
+ $("#profileName").textContent=name();$("#profileEmail").textContent=currentUser?.email||"Local account";$("#profileDisplayName").value=data.profile.name||"";
+ $("#storageStatus").textContent=supabaseClient?"Supabase client configured.":"Local mode active — configure Supabase keys for cloud authentication.";
+ lucide.createIcons();
+}
+function studyStreak(){let streak=0;for(let i=0;i<365;i++){let d=new Date();d.setDate(d.getDate()-i);let iso=d.toISOString().slice(0,10);if(data.sessions.some(x=>x.date===iso)){streak++}else if(i>0)break}return streak}
+function showPage(id){$$(".page").forEach(p=>p.classList.remove("active"));$("#"+id).classList.add("active");$$(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));window.scrollTo({top:0,behavior:"smooth"});render()}
+$$(".nav button").forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+$("#prevMonth").onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()-1);renderCalendar()};
+$("#nextMonth").onclick=()=>{monthCursor.setMonth(monthCursor.getMonth()+1);renderCalendar()};
+$("#quickAdd").onclick=addTask;$("#plannerAddTask").onclick=addTask;$("#plannerAddClass").onclick=addClass;$("#examAdd").onclick=addExam;$("#noteAdd").onclick=addNote;$("#fixDay").onclick=fixDay;
+$$(".quick").forEach(x=>x.onclick=()=>({task:addTask,exam:addExam,note:addNote,study:()=>{showPage("study");startTimer()}}[x.dataset.action])());
+$$(".tool").forEach(x=>x.onclick=()=>tool(x.dataset.tool));
+
+function renderTimer(){let m=Math.floor(timer.seconds/60),s=timer.seconds%60;$("#timerNumber").textContent=String(m).padStart(2,"0")+":"+String(s).padStart(2,"0")}
+function startTimer(){
+ if(timer.running){timer.running=false;clearInterval(timer.interval);$("#timerStart").textContent="Resume";$("#timerStatus").textContent="Paused.";return}
+ timer.running=true;$("#timerStart").textContent="Pause";$("#timerStatus").textContent="Focus mode active.";
+ timer.interval=setInterval(()=>{timer.seconds--;renderTimer();if(timer.seconds<=0){clearInterval(timer.interval);timer.running=false;data.sessions.push({id:uid(),date:today(),minutes:timer.total});save();timer.seconds=timer.total*60;renderTimer();$("#timerStart").textContent="Start session";$("#timerStatus").textContent="Session complete. Nice work.";toast("Focus session complete ✓")}},1000)
+}
+$("#timerStart").onclick=startTimer;
+$("#timerReset").onclick=()=>{clearInterval(timer.interval);timer.running=false;timer.seconds=timer.total*60;renderTimer();$("#timerStart").textContent="Start session";$("#timerStatus").textContent="Ready when you are."};
+$$(".session-preset button").forEach(b=>b.onclick=()=>{$$(".session-preset button").forEach(x=>x.classList.remove("active"));b.classList.add("active");timer.total=+b.dataset.min;timer.seconds=timer.total*60;timer.running=false;clearInterval(timer.interval);renderTimer();$("#timerStart").textContent="Start session"});
+function tool(type){
+ let title="",body="";
+ if(type==="gpa") {title="GPA / CGPA";body=`<p class="lead">Enter total grade points and total credits.</p><div class="field"><label>GRADE POINTS</label><input id="ta" type="number" step=".01"></div><div class="field"><label>CREDITS</label><input id="tb" type="number" step=".01"></div><button class="btn full" onclick="toolCalc('gpa')">Calculate</button><div class="result" id="tr"></div>`}
+ if(type==="percent") {title="Percentage";body=`<div class="field"><label>MARKS OBTAINED</label><input id="ta" type="number"></div><div class="field"><label>TOTAL MARKS</label><input id="tb" type="number"></div><button class="btn full" onclick="toolCalc('percent')">Calculate</button><div class="result" id="tr"></div>`}
+ if(type==="grade") {title="Grade";body=`<div class="field"><label>PERCENTAGE</label><input id="ta" type="number" min="0" max="100"></div><button class="btn full" onclick="toolCalc('grade')">Find grade</button><div class="result" id="tr"></div>`}
+ if(type==="word") {title="Word counter";body=`<div class="field"><label>TEXT</label><textarea id="ta" oninput="wordLive()"></textarea></div><div class="lead" id="tr">0 words · 0 characters · 0 min read</div>`}
+ if(type==="calc") {title="Calculator";body=`<div class="field"><label>EXPRESSION</label><input id="ta" placeholder="(25*4)/5+2"></div><button class="btn full" onclick="toolCalc('calc')">Calculate</button><div class="result" id="tr"></div>`}
+ if(type==="countdown") {title="Countdown";body=`<div class="field"><label>DATE</label><input id="ta" type="date"></div><button class="btn full" onclick="toolCalc('countdown')">Calculate</button><div class="result" id="tr"></div>`}
+ if(type==="pomodoro"){closeModal();showPage("study");return}
+ if(type==="days"){title="Days between";body=`<div class="grid g2"><div class="field"><label>START</label><input id="ta" type="date"></div><div class="field"><label>END</label><input id="tb" type="date"></div></div><button class="btn full" onclick="toolCalc('days')">Calculate</button><div class="result" id="tr"></div>`}
+ if(type==="average"){title="Average";body=`<div class="field"><label>NUMBERS</label><input id="ta" placeholder="82, 91, 76, 88"></div><button class="btn full" onclick="toolCalc('average')">Calculate</button><div class="result" id="tr"></div>`}
+ openModal(title,body)
+}
+window.toolCalc=type=>{let a=$("#ta")?.value||"",b=$("#tb")?.value||"",r="";try{
+ if(type==="gpa")r=b?(+a/+b).toFixed(2):"—";if(type==="percent")r=b?(+a/+b*100).toFixed(2)+"%":"—";if(type==="grade"){let n=+a;r=n>=90?"A+":n>=80?"A":n>=70?"B":n>=60?"C":n>=50?"D":"F"}
+ if(type==="calc"){if(!/^[0-9+\-*/().%\s]+$/.test(a))throw 0;r=Function('"use strict";return ('+a+')')()}
+ if(type==="countdown")r=a?Math.max(0,daysUntil(a))+" days":"—";if(type==="days")r=(new Date(b)-new Date(a))/86400000+" days";if(type==="average"){let ns=a.split(",").map(Number).filter(Number.isFinite);r=ns.length?(ns.reduce((x,y)=>x+y,0)/ns.length).toFixed(2):"—"}$("#tr").textContent=r}catch{$("#tr").textContent="Invalid input"}};
+window.wordLive=()=>{let s=$("#ta").value.trim(),w=s?s.split(/\s+/).length:0;$("#tr").textContent=`${w} words · ${s.length} characters · ${w?Math.max(1,Math.ceil(w/200)):"0"} min read`};
+
+$("#saveProfile").onclick=()=>{data.profile.name=$("#profileDisplayName").value.trim();save();toast("Profile updated ✓")};
+$("#clearLocal").onclick=()=>{if(confirm("Clear NOVA's local tasks, exams, notes and sessions?")){data={...defaultData,profile:{name:name()}};save();toast("Local data cleared")}};
+$("#mobileAdd").onclick=addTask;
+
+/* Command palette */
+const commands=[["Home","house","home"],["Planner","calendar-days","planner"],["Study mode","timer","study"],["Exams","graduation-cap","exams"],["Notes","notebook-pen","notes"],["Tools","wrench","tools"],["Insights","chart-no-axes-combined","insights"],["Profile","settings-2","profile"]];
+function renderCommands(q=""){let list=commands.filter(x=>x[0].toLowerCase().includes(q.toLowerCase()));$("#commandList").innerHTML=list.map(x=>`<button data-cmd="${x[2]}"><i data-lucide="${x[1]}"></i>${x[0]}</button>`).join("");$$("[data-cmd]").forEach(b=>b.onclick=()=>{$("#command").classList.remove("open");showPage(b.dataset.cmd)});lucide.createIcons()}
+$("#commandBtn").onclick=()=>{$("#command").classList.add("open");$("#commandInput").focus();renderCommands()};
+$("#commandInput").oninput=e=>renderCommands(e.target.value);$("#command").onclick=e=>{if(e.target.id==="command")$("#command").classList.remove("open")};
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();$("#command").classList.toggle("open");if($("#command").classList.contains("open"))$("#commandInput").focus();renderCommands()}if(e.key==="Escape"){closeModal();$("#command").classList.remove("open")}});
+
+/* Auth */
+function enterApp(u){currentUser=u;$("#auth").style.display="none";$("#app").style.display="block";render()}
+function enterLocal(){enterApp({email:$("#authEmail").value,name:$("#authName").value||$("#authEmail").value.split("@")[0]})}
+$("#switchMode").onclick=()=>{isSignup=!isSignup;$("#nameWrap").style.display=isSignup?"grid":"none";$("#authTitle").textContent=isSignup?"Create your system.":"Welcome back.";$("#authDesc").textContent=isSignup?"A calmer way to manage student life.":"Everything you need to stay ahead, without the noise.";$("#authButton").textContent=isSignup?"Create account →":"Sign in →";$("#switchLabel").textContent=isSignup?"Already have an account?":"New here?";$("#switchMode").textContent=isSignup?"Sign in":"Create account";$("#authError").textContent=""};
+$("#authForm").onsubmit=async e=>{e.preventDefault();$("#authError").textContent="";if(!supabaseClient){enterLocal();toast("Local mode active — connect Supabase for cloud accounts.");return}
+ try{const res=isSignup?await supabaseClient.auth.signUp({email:$("#authEmail").value,password:$("#authPassword").value,options:{data:{name:$("#authName").value}}}):await supabaseClient.auth.signInWithPassword({email:$("#authEmail").value,password:$("#authPassword").value});if(res.error)throw res.error;if(res.data.user)enterApp(res.data.user);else $("#authError").textContent="Check your email to confirm your account."}catch(err){$("#authError").textContent=err.message||"Authentication failed."}};
+$("#logout").onclick=async()=>{if(supabaseClient)await supabaseClient.auth.signOut();location.reload()};
+
+/* Loader */
+let pct=0;const pctTimer=setInterval(()=>{pct=Math.min(100,pct+Math.ceil(Math.random()*10));$("#loaderPct").textContent=String(pct).padStart(2,"0")+"%";if(pct>=100)clearInterval(pctTimer)},150);
+setTimeout(()=>{$("#loader").style.opacity="0";$("#loader").style.visibility="hidden"},2550);
+
+if(supabaseClient){supabaseClient.auth.getSession().then(({data:{session}})=>{if(session)enterApp(session.user)})}
+lucide.createIcons();
+</script>
+</body>
+</html>
