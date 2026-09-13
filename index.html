@@ -285,7 +285,7 @@ body:after{content:"";position:fixed;width:70vw;height:70vw;right:-35vw;top:-40v
         <div class="page-head"><div class="label">Profile</div><h1 id="profileName">Student</h1><p id="profileEmail"></p></div>
         <div class="grid g2">
           <div class="card"><h3>Your account</h3><div class="field"><label>DISPLAY NAME</label><input id="profileDisplayName"></div><button class="btn" id="saveProfile">Save changes</button></div>
-          <div class="card"><h3>Storage & sync</h3><p class="card-sub" id="storageStatus">Checking connection…</p><p class="card-sub">With Supabase configured, authentication and sync can be connected to your database. Without it, NOVA keeps data locally in this browser.</p><button class="btn secondary" id="clearLocal">Clear local data</button></div>
+          <div class="card"><h3>Storage & sync</h3><p class="card-sub" id="storageStatus">Checking connection…</p><p class="card-sub">Clerk handles authentication. NOVA keeps app data locally in this browser.</p><button class="btn secondary" id="clearLocal">Clear local data</button></div>
         </div>
       </section>
     </main>
@@ -323,6 +323,8 @@ async function initClerk(){
     sdk.async=true;sdk.crossOrigin="anonymous";sdk.setAttribute("data-clerk-publishable-key",CLERK_PUBLISHABLE_KEY);sdk.onload=resolve;sdk.onerror=()=>reject(new Error("Failed to load ClerkJS."));
     document.head.appendChild(sdk);
   });
+  // ClerkJS is exposed as the global instance after the script loads.
+  if(!window.Clerk || typeof window.Clerk.load!=="function") throw new Error("ClerkJS loaded, but the Clerk client is unavailable.");
   await window.Clerk.load({
     ui:{ClerkUI:window.__internal_ClerkUICtor},
     appearance:{
@@ -333,12 +335,36 @@ async function initClerk(){
   clerk=window.Clerk;
 }
 
+function appUrl(){return location.href.split("#")[0];}
+
 function mountClerkAuth(mode="signIn"){
   const host=$("#clerkAuth");
   host.innerHTML="";
-  if(mode==="signUp") clerk.mountSignUp(host,{routing:"hash",signInUrl:"#sign-in",signInFallbackRedirectUrl:location.href,signUpFallbackRedirectUrl:location.href});
-  else clerk.mountSignIn(host,{routing:"hash",signUpUrl:"#sign-up",signInFallbackRedirectUrl:location.href,signUpFallbackRedirectUrl:location.href});
+  if(!clerk) return;
+  const common={
+    routing:"hash",
+    oauthFlow:"popup",
+    signInFallbackRedirectUrl:appUrl(),
+    signUpFallbackRedirectUrl:appUrl()
+  };
+  if(mode==="signUp"){
+    clerk.mountSignUp(host,{...common,signInUrl:"#sign-in"});
+  }else{
+    clerk.mountSignIn(host,{...common,signUpUrl:"#sign-up"});
+  }
 }
+
+function handleAuthRoute(){
+  if(!clerk || clerk.isSignedIn) return;
+  const hash=location.hash.toLowerCase();
+  if(hash.includes("sign-up") || hash.includes("verify-email-address")) mountClerkAuth("signUp");
+  else mountClerkAuth("signIn");
+}
+
+window.addEventListener("hashchange",()=>{
+  if(clerk?.isSignedIn){enterApp(clerk.user);return;}
+  handleAuthRoute();
+});
 
 
 const STORE="nova_v3";
@@ -499,7 +525,7 @@ setTimeout(()=>{$("#loader").style.opacity="0";$("#loader").style.visibility="hi
 (async()=>{
   try{
     await initClerk();
-    if(clerk.isSignedIn){enterApp(clerk.user)}else{mountClerkAuth("signIn")}
+    if(clerk.isSignedIn){enterApp(clerk.user)}else{handleAuthRoute()}
   }catch(err){
     $("#clerkAuth").innerHTML=`<div class="auth-error" style="display:block">${escapeHtml(err.message||"Clerk could not be initialized.")}</div>`;
   }
